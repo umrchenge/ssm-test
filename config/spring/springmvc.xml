@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        ">
+    <context:property-placeholder location="classpath:ftpupload.properties" file-encoding="utf-8"/>
+    <!--注解适配器-->
+    <!--<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"/>-->
+    <!--&lt;!&ndash;注解映射器&ndash;&gt;-->
+    <!--<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping"/>-->
+    <!--使用mvc:annotation-driven代替上边注解映射器和注解适配器配置mvc:annotation-driven默认加载很多的参数绑定方法，
+    比如json转换解析器就默认加载了，如果使用mVc:annotation-driven不用配置RequestMappingHandlerAdapter和RequestMappingHandlerMapping
+    实际开发时使用mvc:annotation-driven
+    -->
+    <mvc:annotation-driven conversion-service="conversionService" validator="validator"></mvc:annotation-driven>
+
+    <!--静态资源解析-->
+    <mvc:resources location="/js/" mapping="js/**"/>
+    <mvc:resources location="/upload/" mapping="upload/items/**"/>
+    
+    <!--自定义参数绑定-->
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+        <!--转换器 -->
+        <property name="converters">
+            <list>
+                <!--日期转换器-->
+                <bean id="customDateConversion" class="cn.umr.controller.CustomDateConversion"/>
+            </list>
+        </property>
+    </bean>
+
+
+        <!--处理器适配器
+        所有的处理器适配器都要实现HandlerAdapter接口-->
+        <bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter"/>
+
+        <!--另一个非注解处理器适配器-->
+        <bean class="org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter"></bean>
+
+    <!--<bean id="multipartResolver"-->
+          <!--class="org.springframework.web.multipart.commons.CommonsMultipartResolver">-->
+        <!--&lt;!&ndash; 设置上传文件的最大尺寸为5MB &ndash;&gt;-->
+        <!--<property name="maxUploadSize">-->
+            <!--<value>5242880</value>-->
+        <!--</property>-->
+    <!--</bean>-->
+        <!-- 处理器映射器
+        所有的映射器都实现了HandlerMapping接口
+        将bean的name作为ur1进行查找，需要在配置Handler时指定beanname（就是ur1） -->
+        <bean class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping" />
+
+
+        <!--视图解析器
+         解析jsp视图，默认使用jst1标签，classpath下的得有jstl的包
+        -->
+        <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+            <!--配置jsp路径的前缀-->
+            <property name="prefix" value="/jsp/"/>
+            <!--配置jsp路径的后缀-->
+            <property name="suffix" value=".jsp"/>
+        </bean>
+
+    <!--&lt;!&ndash;简单url映射器 &ndash;&gt;-->
+    <!--<bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">-->
+        <!--<property name="mappings">-->
+            <!--<props>-->
+                <!--<prop key="/items1.action">itemsController1</prop>-->
+                <!--<prop key="/items2.action">itemsController1</prop>-->
+                <!--<prop key="/items3.action">itemsController2</prop>-->
+            <!--</props>-->
+        <!--</property>-->
+    <!--</bean>-->
+
+    <!--配置实现了Controller接口的Handler-->
+
+    <!--配置实现了HttpRequestHandler接口的Handler-->
+
+    <!--配置注解Handler-->
+    <!--<bean class="cn.umr.controller.ItemsController3"/>-->
+    <!--直接使用组件扫描，自动加载@Service,@Controller等注解的类
+    这里让扫描controller，指定controller的包-->
+    <context:component-scan base-package="cn.umr.controller">
+        <!--<context:include-filter type="annotation" expression="org.springframework.stereotype.Controller"/>-->
+    </context:component-scan>
+
+    <!-- 校验器 -->
+    <bean id="validator"
+          class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+        <!-- 校验器-->
+        <property name="providerClass" value="org.hibernate.validator.HibernateValidator" />
+        <!-- 指定校验使用的资源文件，如果不指定则默认使用classpath下的ValidationMessages.properties -->
+        <property name="validationMessageSource" ref="messageSource" />
+    </bean>
+    <!-- 校验错误信息配置文件 -->
+    <bean id="messageSource"
+          class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+        <!-- 资源文件名-->
+        <property name="basenames">
+            <list>
+                <value>classpath:CustomValidationMessages</value>
+            </list>
+        </property>
+        <!-- 资源文件编码格式 -->
+        <property name="defaultEncoding" value="utf-8" />
+        <!-- 对资源文件内容缓存时间，单位秒 -->
+        <property name="cacheSeconds" value="120" />
+    </bean>
+
+    <!--全局异常处理器
+    只要实现了HandlerExceptionResolver接口的就是全局异常处理器
+    -->
+    <bean class="cn.umr.exception.CustomExceptionResolver"></bean>
+
+    <!-- 文件上传解析器-->
+    <bean id="multipartResolver"
+          class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <!-- 设置上传文件的最大尺寸为5MB -->
+        <property name="maxUploadSize">
+            <value>5242880</value>
+        </property>
+    </bean>
+
+    <!--拦截器 -->
+    <mvc:interceptors>
+        <!--多个拦截器,顺序执行 -->
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="cn.umr.interceptor.LoginInterceptor"></bean>
+        </mvc:interceptor>
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="cn.umr.interceptor.HandlerInterceptor1"></bean>
+        </mvc:interceptor>
+        <mvc:interceptor>
+            <mvc:mapping path="/**"/>
+            <bean class="cn.umr.interceptor.HandlerInterceptor2"></bean>
+        </mvc:interceptor>
+    </mvc:interceptors>
+
+
+</beans>
